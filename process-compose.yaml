@@ -1,0 +1,8 @@
+version: "0.5"
+processes:
+  server:
+    command: "uv run --directory server flask run"
+    availability:
+      restart: "on_failure"
+    shutdown:
+      command: "SIGTERM"

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
@@ -49,7 +50,14 @@ class SatelliteAudioHandler extends BaseAudioHandler {
   int _reconnectAttempt = 0;
   String _serverStatus = 'Not Configured';
   String? _serverUrl;
+  String _satelliteId = 'unknown';
+  String _satelliteName = 'Unnamed Satellite';
   bool _assetLoaded = false;
+
+  void setSatelliteIdentity({required String id, required String name}) {
+    _satelliteId = id;
+    _satelliteName = name;
+  }
 
   Future<void> setServerUrl(String url) async {
     _serverUrl = url;
@@ -88,6 +96,15 @@ class SatelliteAudioHandler extends BaseAudioHandler {
       debugPrint(
         '[Satellite heartbeat] status=$_serverStatus playing=${_player.playing} wsConnected=$wsConnected',
       );
+      if (wsConnected) {
+        _statusChannel!.sink.add(
+          jsonEncode({
+            'type': 'ping',
+            'id': _satelliteId,
+            'name': _satelliteName,
+          }),
+        );
+      }
     });
   }
 
@@ -160,6 +177,14 @@ class SatelliteAudioHandler extends BaseAudioHandler {
     try {
       _statusChannel = WebSocketChannel.connect(wsUri);
       _reconnectAttempt = 0;
+      _statusChannel!.sink.add(
+        jsonEncode({
+          'type': 'hello',
+          'role': 'satellite',
+          'id': _satelliteId,
+          'name': _satelliteName,
+        }),
+      );
       _statusChannelSub = _statusChannel!.stream.listen(
         (message) async {
           try {
@@ -344,11 +369,14 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String _serverUrl = '';
+  String _satelliteName = 'Unnamed Satellite';
+  String _satelliteId = '';
   bool _hasPermissions = false;
   String _status = 'Not Configured';
   bool _isPlaying = false;
   bool _isConfigured = false;
   final _urlController = TextEditingController();
+  final _nameController = TextEditingController();
   StreamSubscription<dynamic>? _handlerStateSub;
 
   @override
@@ -371,32 +399,52 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _handlerStateSub?.cancel();
     _urlController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
   Future<void> _loadServerUrl() async {
     final prefs = await SharedPreferences.getInstance();
     final url = prefs.getString('server_url') ?? '';
+    final name = prefs.getString('satellite_name') ?? 'Unnamed Satellite';
+    final id = prefs.getString('satellite_id') ?? _generateSatelliteId();
+    await prefs.setString('satellite_id', id);
     setState(() {
       _serverUrl = url;
+      _satelliteName = name;
+      _satelliteId = id;
       _isConfigured = url.isNotEmpty;
       _urlController.text = url;
+      _nameController.text = name;
     });
+    widget.audioHandler
+        .setSatelliteIdentity(id: _satelliteId, name: _satelliteName);
     if (_isConfigured) {
       await widget.audioHandler.setServerUrl(_serverUrl);
     }
   }
 
-  Future<void> _saveServerUrl(String url) async {
+  String _generateSatelliteId() {
+    final random = Random();
+    final millis = DateTime.now().millisecondsSinceEpoch.toRadixString(16);
+    final suffix = random.nextInt(1 << 20).toRadixString(16).padLeft(5, '0');
+    return 'sat-$millis-$suffix';
+  }
+
+  Future<void> _saveConfiguration(String url, String satelliteName) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('server_url', url);
+    await prefs.setString('satellite_name', satelliteName);
     setState(() {
       _serverUrl = url;
+      _satelliteName = satelliteName;
       _isConfigured = url.isNotEmpty;
       if (_isConfigured) {
         _status = 'Ready';
       }
     });
+    widget.audioHandler
+        .setSatelliteIdentity(id: _satelliteId, name: _satelliteName);
     if (_isConfigured) {
       await widget.audioHandler.setServerUrl(_serverUrl);
     }
@@ -460,12 +508,32 @@ class _HomePageState extends State<HomePage> {
                     borderSide: BorderSide(color: Colors.white)),
               ),
             ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _nameController,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              decoration: const InputDecoration(
+                labelText: 'Satellite Name',
+                labelStyle: TextStyle(color: Colors.grey),
+                hintText: 'Bedroom Speaker',
+                hintStyle: TextStyle(color: Colors.grey),
+                enabledBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white)),
+                focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white)),
+              ),
+            ),
             const Spacer(),
             const SizedBox(height: 16),
             SizedBox(
               height: 56,
               child: ElevatedButton(
-                onPressed: () => _saveServerUrl(_urlController.text.trim()),
+                onPressed: () => _saveConfiguration(
+                  _urlController.text.trim(),
+                  _nameController.text.trim().isEmpty
+                      ? 'Unnamed Satellite'
+                      : _nameController.text.trim(),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
@@ -570,16 +638,28 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 16),
             ],
-            OutlinedButton(
-              onPressed: _hasPermissions ? null : _requestPermissions,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.white),
-                padding: const EdgeInsets.symmetric(vertical: 20),
+            if (!_hasPermissions) ...[
+              OutlinedButton(
+                onPressed: _requestPermissions,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: const BorderSide(color: Colors.white),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                ),
+                child: const Text(
+                  'REQUEST PERMISSIONS',
+                  style: TextStyle(letterSpacing: 2),
+                ),
               ),
-              child: Text(
-                _hasPermissions ? 'PERMISSIONS GRANTED' : 'REQUEST PERMISSIONS',
-                style: const TextStyle(letterSpacing: 2),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              'SATELLITE: ${_satelliteName.toUpperCase()}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                letterSpacing: 2,
+                color: Colors.grey,
+                fontSize: 12,
               ),
             ),
             const SizedBox(height: 16),
@@ -587,6 +667,7 @@ class _HomePageState extends State<HomePage> {
               onPressed: () async {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.remove('server_url');
+                await prefs.remove('satellite_name');
                 await widget.audioHandler.setServerUrl('');
                 setState(() {
                   _isConfigured = false;

@@ -1,3 +1,5 @@
 __pycache__
 
 satellite_server.egg-info
+
+!.env

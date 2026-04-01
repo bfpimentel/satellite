@@ -52,6 +52,7 @@
             flutter
             jdk17
             uv
+            process-compose
             android-sdk
             nix-ld
           ];
@@ -102,4 +103,3 @@ EOF
       }
     );
 }
-
