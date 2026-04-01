@@ -19,3 +19,11 @@ White-noise playback app made with Flutter and controlled by a Flask server.
 - Process Compose UI/API port is controlled by `PC_PORT_NUM` (default in `.env.example` is `6332`).
 - Server control page is available at `http://<your-host-ip>:6333`.
 - If testing on a physical Android device, set the app server URL to your machine LAN IP (for example `http://192.168.1.20:6333`).
+
+## Screenshots
+
+
+
+| Server | App |
+|---|---|
+|<img width=300 src="./assets/server.png" />|<img width=300 src="./assets/app.png" />|
