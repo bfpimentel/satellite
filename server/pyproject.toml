@@ -1,0 +1,14 @@
+[project]
+name = "satellite-server"
+version = "0.1.0"
+description = "Satellite control server"
+requires-python = ">=3.10"
+dependencies = [
+  "flask>=2.0.0",
+  "flask-sock>=0.7.0",
+  "python-dotenv>=1.0.1",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
