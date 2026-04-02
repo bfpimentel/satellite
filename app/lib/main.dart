@@ -48,6 +48,45 @@ class SatelliteApp extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
         ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            shape:
+                const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            shape:
+                const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            shape:
+                const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+          ),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: Colors.white)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: Colors.white)),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: Colors.white)),
+          errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: Colors.white)),
+          focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: Colors.white)),
+        ),
       ),
       home: const HomePage(),
     );
@@ -95,8 +134,8 @@ class SetupScreen extends StatelessWidget {
             const SizedBox(height: 40),
             const Text(
               'SETUP',
-              style:
-                  TextStyle(fontSize: 12, letterSpacing: 2, color: Colors.grey),
+              style: TextStyle(
+                  fontSize: 18, letterSpacing: 2, color: Colors.white),
             ),
             const SizedBox(height: 16),
             const Text(
@@ -112,10 +151,6 @@ class SetupScreen extends StatelessWidget {
                 labelStyle: TextStyle(color: Colors.grey),
                 hintText: 'http://192.168.1.100:5000',
                 hintStyle: TextStyle(color: Colors.grey),
-                enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white)),
-                focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white)),
               ),
             ),
             const SizedBox(height: 16),
@@ -127,10 +162,6 @@ class SetupScreen extends StatelessWidget {
                 labelStyle: TextStyle(color: Colors.grey),
                 hintText: 'Bedroom Speaker',
                 hintStyle: TextStyle(color: Colors.grey),
-                enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white)),
-                focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white)),
               ),
             ),
             const Spacer(),
@@ -229,22 +260,23 @@ class MainScreen extends StatelessWidget {
               const Spacer(),
               SizedBox(
                 height: 56,
-                child: ElevatedButton(
-                  onPressed: () => audioStore.toggleServerStatus(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                  ),
-                  child: Text(
-                    audioState.serverStatus == 'Playing'
-                        ? 'REQUEST PAUSE'
-                        : 'REQUEST PLAY',
-                    style: const TextStyle(
-                      letterSpacing: 2,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+                child: audioState.serverStatus == 'Playing'
+                    ? OutlinedButton(
+                        onPressed: () => audioStore.toggleServerStatus(),
+                        child: const Text(
+                          'REQUEST PAUSE',
+                        ),
+                      )
+                    : ElevatedButton(
+                        onPressed: () => audioStore.toggleServerStatus(),
+                        child: const Text(
+                          'REQUEST PLAY',
+                          style: TextStyle(
+                            letterSpacing: 2,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
               ),
               const SizedBox(height: 16),
               if (!satelliteState.hasPermissions) ...[
@@ -270,11 +302,6 @@ class MainScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 OutlinedButton(
                   onPressed: () => satelliteStore.requestPermissions(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    side: const BorderSide(color: Colors.white),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                  ),
                   child: const Text(
                     'REQUEST PERMISSIONS',
                     style: TextStyle(letterSpacing: 2),

@@ -1,4 +1,4 @@
-package com.satellite.app
+package so.bruno.satellite
 
 import com.ryanheise.audioservice.AudioServiceActivity
 
