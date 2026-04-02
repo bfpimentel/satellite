@@ -23,7 +23,6 @@ White-noise playback app made with Flutter and controlled by a Flask server.
 ## Screenshots
 
 
-
 | Server | App |
 |---|---|
 |<img width=300 src="./assets/server.png" />|<img width=300 src="./assets/app.png" />|
