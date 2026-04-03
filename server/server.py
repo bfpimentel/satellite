@@ -2,7 +2,7 @@ import json
 import os
 import time
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from flask_sock import Sock
 
 app = Flask(__name__)
@@ -13,6 +13,11 @@ DATA_FILE = os.environ.get("SATELLITE_DATA_FILE", "satellites.json")
 STATUS = {"state": "Paused"}
 WS_CLIENTS = set()
 SATELLITES = {}
+
+
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    return send_from_directory("static", filename)
 
 
 def _satellite_name(item):

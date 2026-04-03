@@ -1,0 +1,11 @@
+services:
+  satellite-server:
+    image: ghcr.io/bfpimentel/satellite:latest
+    container_name: satellite-server
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data

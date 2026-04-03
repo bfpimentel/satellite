@@ -3,6 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Satellite Server - White Noise Player" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Satellite" />
+    <link rel="manifest" href="/static/manifest.json" />
+    <link rel="apple-touch-icon" href="/static/icon.png" />
     <title>Satellite Server</title>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Victor+Mono:wght@400;600;700&display=swap");
@@ -189,6 +196,13 @@
 
       connectWebSocket();
       render({ state: "Paused", satellites: [] });
+
+      // Register service worker for PWA support
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/static/sw.js")
+          .then(() => console.log("Service Worker registered"))
+          .catch((err) => console.error("Service Worker registration failed:", err));
+      }
     </script>
   </body>
 </html>
