@@ -36,7 +36,7 @@ class AudioStore {
   factory AudioStore() => _instance;
   AudioStore._internal();
 
-  late final AudioPlayer _player = AudioPlayer();
+  AudioPlayer? _player;
   WebSocketChannel? _statusChannel;
   StreamSubscription<dynamic>? _statusChannelSub;
   Timer? _reconnectTimer;
@@ -52,10 +52,15 @@ class AudioStore {
 
   Stream<PlaybackState>? _playbackStateStream;
 
-  void init() {
-    _player.playerStateStream.listen((playerState) {
+  void setPlayer(AudioPlayer player) {
+    _player = player;
+    _player!.playerStateStream.listen((playerState) {
       state.value = state.value.copyWith(isPlaying: playerState.playing);
     });
+  }
+
+  void init() {
+    // Player must be set via setPlayer() before calling init
   }
 
   void setSatelliteIdentity({required String id, required String name}) {
@@ -151,7 +156,7 @@ class AudioStore {
       await _applyServerState(newState);
     } catch (e) {
       state.value = state.value.copyWith(serverStatus: 'Server Unreachable');
-      if (_player.playing) {
+      if (_player?.playing == true) {
         await pause();
       }
     }
@@ -247,10 +252,10 @@ class AudioStore {
   Future<void> _applyServerState(String newState) async {
     debugPrint('Server state: $newState');
     if (newState == 'Playing') {
-      if (!_player.playing) await play();
+      if (_player?.playing != true) await play();
       state.value = state.value.copyWith(serverStatus: 'Playing');
     } else if (newState == 'Paused') {
-      if (_player.playing) await pause();
+      if (_player?.playing == true) await pause();
       state.value = state.value.copyWith(serverStatus: 'Paused');
     } else {
       state.value = state.value.copyWith(
@@ -261,24 +266,24 @@ class AudioStore {
 
   Future<void> play() async {
     if (!_assetLoaded) {
-      await _player.setAsset('assets/white_noise.wav');
-      await _player.setLoopMode(LoopMode.one);
+      await _player?.setAsset('assets/white_noise.wav');
+      await _player?.setLoopMode(LoopMode.one);
       _assetLoaded = true;
     }
-    await _player.play();
+    await _player?.play();
   }
 
   Future<void> pause() async {
-    await _player.pause();
+    await _player?.pause();
   }
 
   Future<void> stop() async {
     await _disconnectStatusSocket();
-    await _player.stop();
+    await _player?.stop();
   }
 
-  Stream<PlaybackState> get playbackStateStream {
-    _playbackStateStream ??= _player.playerStateStream.map((playerState) {
+  Stream<PlaybackState>? get playbackStateStream {
+    _playbackStateStream ??= _player?.playerStateStream.map((playerState) {
       return PlaybackState(
         controls: const [
           MediaControl.play,
@@ -291,6 +296,6 @@ class AudioStore {
         playing: playerState.playing,
       );
     });
-    return _playbackStateStream!;
+    return _playbackStateStream;
   }
 }

@@ -1,14 +1,29 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
+import 'audio_handler.dart';
 import 'stores/audio_store.dart';
 import 'stores/satellite_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  final audioHandler = await AudioService.init(
+    builder: () => SatelliteAudioHandler(),
+    config: const AudioServiceConfig(
+      androidNotificationChannelId: 'so.bruno.satellite.playback',
+      androidNotificationChannelName: 'Satellite Playback',
+      androidNotificationIcon: 'drawable/ic_stat_satellite',
+      androidNotificationOngoing: false,
+      androidStopForegroundOnPause: false,
+    ),
+  );
+
   final audioStore = AudioStore();
   final satelliteStore = SatelliteStore();
+
+  audioStore.setPlayer(audioHandler.player);
 
   await satelliteStore.init();
   audioStore.init();
@@ -19,7 +34,7 @@ Future<void> main() async {
   );
 
   if (satelliteStore.state.value.isConfigured) {
-    await audioStore.setServerUrl(satelliteStore.state.value.serverUrl);
+    audioStore.setServerUrl(satelliteStore.state.value.serverUrl);
   }
 
   runApp(const SatelliteApp());
