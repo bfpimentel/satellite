@@ -8,7 +8,10 @@ from flask_sock import Sock
 app = Flask(__name__)
 sock = Sock(app)
 
-DATA_FILE = os.environ.get("SATELLITE_DATA_FILE", "satellites.json")
+DATA_DIR = "/app/data"
+DATA_FILE = f"{DATA_DIR}/satellites.json"
+
+os.makedirs(DATA_DIR, exist_ok=True)
 
 STATUS = {"state": "Paused"}
 WS_CLIENTS = set()
@@ -25,7 +28,6 @@ def _satellite_name(item):
 
 
 def load_satellites():
-    """Load satellites from filesystem on startup."""
     global SATELLITES
     if os.path.exists(DATA_FILE):
         try:
@@ -42,7 +44,6 @@ def load_satellites():
 
 
 def save_satellites():
-    """Persist satellites to filesystem."""
     try:
         with open(DATA_FILE, "w") as f:
             json.dump({"satellites": SATELLITES}, f, indent=2)
@@ -160,5 +161,6 @@ def ws_status(ws):
             broadcast_snapshot()
 
 
-# Load satellites from filesystem on startup
-load_satellites()
+if __name__ == "__main__":
+    load_satellites()
+    app.run(host="0.0.0.0", port=6333, debug=False)

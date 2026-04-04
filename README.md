@@ -10,9 +10,7 @@ White-noise playback app made with Flutter and controlled by a Flask server.
 ## How To Run
 
 1. Start the server in the background with `process-compose up` or `process-compose up -D`
-2. Start the Flutter app
-    2.1. `cd app`
-    2.2. `flutter run`
+2. Start the Flutter app with `cd app && flutter run`
 
 ## Notes
 

@@ -48,11 +48,10 @@
       {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
+            uv
             python3
             flutter
             jdk17
-            uv
-            process-compose
             android-sdk
             nix-ld
           ];
