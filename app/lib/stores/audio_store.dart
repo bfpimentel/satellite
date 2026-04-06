@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../audio_handler.dart';
+
 enum AudioTrack { whiteNoise, rain }
 
 extension AudioTrackExtension on AudioTrack {
@@ -64,6 +66,7 @@ class AudioStore {
   AudioStore._internal();
 
   AudioPlayer? _player;
+  SatelliteAudioHandler? _audioHandler;
   WebSocketChannel? _statusChannel;
   StreamSubscription<dynamic>? _statusChannelSub;
   Timer? _reconnectTimer;
@@ -78,6 +81,10 @@ class AudioStore {
   final Signal<AudioState> state = signal(const AudioState());
 
   Stream<PlaybackState>? _playbackStateStream;
+
+  void setAudioHandler(SatelliteAudioHandler handler) {
+    _audioHandler = handler;
+  }
 
   void setPlayer(AudioPlayer player) {
     _player = player;
@@ -98,12 +105,16 @@ class AudioStore {
       orElse: () => AudioTrack.whiteNoise,
     );
     state.value = state.value.copyWith(selectedTrack: track);
+    _audioHandler?.setTrack(track.assetPath, track.displayName);
   }
 
   Future<void> setTrack(AudioTrack track) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('selected_track', track.name);
     state.value = state.value.copyWith(selectedTrack: track);
+
+    // Update notification
+    _audioHandler?.setTrack(track.assetPath, track.displayName);
 
     // Reload asset if track changes
     if (_assetLoaded) {

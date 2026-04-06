@@ -7,19 +7,34 @@ class SatelliteAudioHandler extends BaseAudioHandler {
   final AudioPlayer _player = AudioPlayer();
   StreamSubscription<PlayerState>? _playerStateSubscription;
   bool _assetLoaded = false;
+  String _currentTrackId = 'assets/white_noise.wav';
+  String _currentTrackTitle = 'White Noise';
 
   SatelliteAudioHandler() {
-    mediaItem.add(
-      const MediaItem(
-        id: 'asset:///assets/white_noise.wav',
-        album: 'Satellite',
-        title: 'White Noise',
-      ),
-    );
+    _updateMediaItem();
 
     _playerStateSubscription = _player.playerStateStream.listen((state) {
       _updatePlaybackState(state.playing);
     });
+  }
+
+  void _updateMediaItem() {
+    mediaItem.add(
+      MediaItem(
+        id: 'asset:///$_currentTrackId',
+        album: 'Satellite',
+        title: _currentTrackTitle,
+      ),
+    );
+  }
+
+  void setTrack(String assetPath, String title) {
+    if (_currentTrackId != assetPath) {
+      _currentTrackId = assetPath;
+      _currentTrackTitle = title;
+      _assetLoaded = false;
+      _updateMediaItem();
+    }
   }
 
   void _updatePlaybackState(bool isPlaying) {
@@ -39,7 +54,7 @@ class SatelliteAudioHandler extends BaseAudioHandler {
   @override
   Future<void> play() async {
     if (!_assetLoaded) {
-      await _player.setAsset('assets/white_noise.wav');
+      await _player.setAsset(_currentTrackId);
       await _player.setLoopMode(LoopMode.one);
       _assetLoaded = true;
     }

@@ -24,6 +24,7 @@ Future<void> main() async {
   final satelliteStore = SatelliteStore();
 
   audioStore.setPlayer(audioHandler.player);
+  audioStore.setAudioHandler(audioHandler);
 
   await satelliteStore.init();
   audioStore.init();
