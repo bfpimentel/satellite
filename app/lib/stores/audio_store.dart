@@ -4,29 +4,56 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+
+enum AudioTrack { whiteNoise, rain }
+
+extension AudioTrackExtension on AudioTrack {
+  String get displayName {
+    switch (this) {
+      case AudioTrack.whiteNoise:
+        return 'White Noise';
+      case AudioTrack.rain:
+        return 'Rain';
+    }
+  }
+
+  String get assetPath {
+    switch (this) {
+      case AudioTrack.whiteNoise:
+        return 'assets/white_noise.wav';
+      case AudioTrack.rain:
+        return 'assets/rain.mp3';
+    }
+  }
+}
 
 class AudioState {
   final String serverStatus;
   final bool isPlaying;
   final bool isWebSocketConnected;
+  final AudioTrack selectedTrack;
 
   const AudioState({
     this.serverStatus = 'Not Configured',
     this.isPlaying = false,
     this.isWebSocketConnected = false,
+    this.selectedTrack = AudioTrack.whiteNoise,
   });
 
   AudioState copyWith({
     String? serverStatus,
     bool? isPlaying,
     bool? isWebSocketConnected,
+    AudioTrack? selectedTrack,
   }) {
     return AudioState(
       serverStatus: serverStatus ?? this.serverStatus,
       isPlaying: isPlaying ?? this.isPlaying,
       isWebSocketConnected: isWebSocketConnected ?? this.isWebSocketConnected,
+      selectedTrack: selectedTrack ?? this.selectedTrack,
     );
   }
 }
@@ -59,8 +86,35 @@ class AudioStore {
     });
   }
 
-  void init() {
-    // Player must be set via setPlayer() before calling init
+  Future<void> init() async {
+    await _loadSelectedTrack();
+  }
+
+  Future<void> _loadSelectedTrack() async {
+    final prefs = await SharedPreferences.getInstance();
+    final trackName = prefs.getString('selected_track') ?? 'whiteNoise';
+    final track = AudioTrack.values.firstWhere(
+      (t) => t.name == trackName,
+      orElse: () => AudioTrack.whiteNoise,
+    );
+    state.value = state.value.copyWith(selectedTrack: track);
+  }
+
+  Future<void> setTrack(AudioTrack track) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selected_track', track.name);
+    state.value = state.value.copyWith(selectedTrack: track);
+
+    // Reload asset if track changes
+    if (_assetLoaded) {
+      _assetLoaded = false;
+      await _player?.stop();
+    }
+
+    // Auto-play if server is currently playing
+    if (state.value.serverStatus == 'Playing') {
+      await play();
+    }
   }
 
   void setSatelliteIdentity({required String id, required String name}) {
@@ -265,8 +319,9 @@ class AudioStore {
   }
 
   Future<void> play() async {
+    final track = state.value.selectedTrack;
     if (!_assetLoaded) {
-      await _player?.setAsset('assets/white_noise.wav');
+      await _player?.setAsset(track.assetPath);
       await _player?.setLoopMode(LoopMode.one);
       _assetLoaded = true;
     }

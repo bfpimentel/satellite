@@ -24,6 +24,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/white_noise.wav
+    - assets/rain.mp3
   fonts:
     - family: Victor Mono
       fonts:

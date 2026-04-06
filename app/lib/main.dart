@@ -258,19 +258,30 @@ class MainScreen extends StatelessWidget {
               ),
               const SizedBox(height: 48),
               const Text(
-                'PLAYBACK',
+                'SOUND TRACK',
                 style: TextStyle(
                     fontSize: 12, letterSpacing: 2, color: Colors.grey),
               ),
               const SizedBox(height: 8),
-              Text(
-                audioState.isPlaying ? 'PLAYING' : 'PAUSED',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 4,
-                  color: audioState.isPlaying ? Colors.white : Colors.grey,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _TrackButton(
+                      label: 'WHITE NOISE',
+                      isSelected:
+                          audioState.selectedTrack == AudioTrack.whiteNoise,
+                      onTap: () => audioStore.setTrack(AudioTrack.whiteNoise),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _TrackButton(
+                      label: 'RAIN',
+                      isSelected: audioState.selectedTrack == AudioTrack.rain,
+                      onTap: () => audioStore.setTrack(AudioTrack.rain),
+                    ),
+                  ),
+                ],
               ),
               const Spacer(),
               SizedBox(
@@ -348,6 +359,45 @@ class MainScreen extends StatelessWidget {
             ],
           );
         }),
+      ),
+    );
+  }
+}
+
+class _TrackButton extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _TrackButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.grey,
+            width: isSelected ? 2 : 1,
+          ),
+          color: isSelected ? Colors.white : Colors.transparent,
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            letterSpacing: 2,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+            color: isSelected ? Colors.black : Colors.white,
+          ),
+        ),
       ),
     );
   }
