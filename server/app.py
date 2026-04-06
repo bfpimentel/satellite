@@ -8,8 +8,8 @@ from flask_sock import Sock
 app = Flask(__name__)
 sock = Sock(app)
 
-DATA_DIR = "/app/data"
-DATA_FILE = f"{DATA_DIR}/satellites.json"
+DATA_DIR = "data"
+DATA_FILE = os.path.join(DATA_DIR, "satellites.json")
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -21,6 +21,11 @@ SATELLITES = {}
 @app.route("/static/<path:filename>")
 def static_files(filename):
     return send_from_directory("static", filename)
+
+
+@app.route("/download/apk")
+def download_apk():
+    return send_from_directory("static", "satellite.apk", as_attachment=True)
 
 
 def _satellite_name(item):

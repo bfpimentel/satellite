@@ -1,4 +1,4 @@
-#!/nix/store/v8sa6r6q037ihghxfbwzjj4p59v2x0pv-bash-5.3p9/bin/bash
+#!/usr/bin/env bash
 
 ##############################################################################
 ##

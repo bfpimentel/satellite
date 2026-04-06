@@ -1,0 +1,29 @@
+# Flutter generated
+/.gradle
+captures/
+local.properties
+GeneratedPluginRegistrant.java
+
+# Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Build outputs
+/build/
+/app/build/
+
+# Native build
+.externalNativeBuild
+.cxx/
+
+# Signing files
+*.jks
+*.keystore
+key.properties
+
+# Misc
+.DS_Store
+*.log
+*.class

@@ -9,7 +9,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Satellite" />
     <link rel="manifest" href="/static/manifest.json" />
-    <link rel="apple-touch-icon" href="/static/icon.png" />
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/static/satellite.svg" />
+    <link rel="apple-touch-icon" href="/static/icon-192x192.png" />
     <title>Satellite Server</title>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Victor+Mono:wght@400;600;700&display=swap");
@@ -68,6 +70,11 @@
         color: #fff;
         border: 1px solid #fff;
       }
+      button.download {
+        background: transparent;
+        color: #fff;
+        border: 1px solid #fff;
+      }
       .panel {
         width: min(720px, 92vw);
         border: 1px solid #fff;
@@ -106,6 +113,7 @@
     <div class="status" id="status">Paused</div>
     <div class="controls">
       <button id="toggleBtn" onclick="toggleStatus()">Play</button>
+      <button class="download" onclick="downloadApp()">Download App</button>
     </div>
 
     <div class="panel">
@@ -177,6 +185,10 @@
         ws.onclose = () => {
           setTimeout(connectWebSocket, 1500);
         };
+      }
+
+      function downloadApp() {
+        window.location.href = "/download/apk";
       }
 
       setInterval(() => {

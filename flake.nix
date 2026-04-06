@@ -57,26 +57,8 @@
           ];
 
           shellHook = ''
-            export NIX_LD="${
-              pkgs.lib.makeLibraryPath [
-                pkgs.stdenv.cc.bintools
-                pkgs.stdenv.cc.libc
-                pkgs.glibc
-              ]
-            }"
-
             export ANDROID_SDK_ROOT="${android-sdk}/libexec/android-sdk"
             export ANDROID_HOME="$ANDROID_SDK_ROOT"
-
-            # Write local.properties to use nix aapt2
-            cat > app/android/local.properties << EOF
-flutter.sdk=${flutter-pkgs}
-sdk.dir=$ANDROID_SDK_ROOT
-EOF
-
-            # Configure gradle to use nix aapt2
-            mkdir -p ~/.gradle
-            echo "android.aapt2FromMavenOverride=$ANDROID_SDK_ROOT/build-tools/34.0.0/aapt2" >> ~/.gradle/gradle.properties
 
             if [ -f .env ]; then
               source .env

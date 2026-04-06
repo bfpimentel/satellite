@@ -4,10 +4,3 @@
 *.lock
 
 build/
-
-# Android generated
-android/app/src/main/java/io/flutter/plugins/
-android/app/src/main/res/mipmap-*/
-android/gradle/
-android/.gradle/
-android/local.properties
