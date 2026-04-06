@@ -103,8 +103,10 @@
       .offline {
         color: #ff9b9b;
       }
-      .dim {
-        color: #8c8c8c;
+      button.clear {
+        background: transparent;
+        color: #ff9b9b;
+        border: 1px solid #ff9b9b;
       }
     </style>
   </head>
@@ -119,6 +121,7 @@
     <div class="panel">
       <h2>SATELLITES</h2>
       <div id="satellites"></div>
+      <button class="clear" onclick="clearSatellites()" style="margin-top: 16px; padding: 12px 24px; font-size: 14px;">Clear Satellites</button>
     </div>
 
     <script>
@@ -189,6 +192,17 @@
 
       function downloadApp() {
         window.location.href = "/download/apk";
+      }
+
+      async function clearSatellites() {
+        if (!confirm("Are you sure you want to clear all satellites?")) return;
+        try {
+          const response = await fetch("/satellites", { method: "DELETE" });
+          const data = await response.json();
+          console.log("Cleared satellites:", data);
+        } catch (e) {
+          console.error("Failed to clear satellites:", e);
+        }
       }
 
       setInterval(() => {

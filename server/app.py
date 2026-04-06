@@ -123,6 +123,15 @@ def get_satellites():
     return jsonify({"satellites": satellites_snapshot()})
 
 
+@app.route("/satellites", methods=["DELETE"])
+def clear_satellites():
+    global SATELLITES
+    SATELLITES = {}
+    save_satellites()
+    broadcast_snapshot()
+    return jsonify({"success": True, "message": "All satellites cleared"})
+
+
 @app.route("/status", methods=["POST"])
 def set_status():
     data = request.get_json()

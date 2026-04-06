@@ -14,7 +14,7 @@ Future<void> main() async {
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'so.bruno.satellite.playback',
       androidNotificationChannelName: 'Satellite Playback',
-      androidNotificationIcon: 'drawable/ic_stat_satellite',
+      androidNotificationIcon: 'drawable/ic_satellite',
       androidNotificationOngoing: false,
       androidStopForegroundOnPause: false,
     ),
