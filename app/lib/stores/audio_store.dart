@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,12 +38,14 @@ class AudioState {
   final bool isPlaying;
   final bool isWebSocketConnected;
   final AudioTrack selectedTrack;
+  final double volume;
 
   const AudioState({
     this.serverStatus = 'Not Configured',
     this.isPlaying = false,
     this.isWebSocketConnected = false,
     this.selectedTrack = AudioTrack.whiteNoise,
+    this.volume = 1.0,
   });
 
   AudioState copyWith({
@@ -50,12 +53,14 @@ class AudioState {
     bool? isPlaying,
     bool? isWebSocketConnected,
     AudioTrack? selectedTrack,
+    double? volume,
   }) {
     return AudioState(
       serverStatus: serverStatus ?? this.serverStatus,
       isPlaying: isPlaying ?? this.isPlaying,
       isWebSocketConnected: isWebSocketConnected ?? this.isWebSocketConnected,
       selectedTrack: selectedTrack ?? this.selectedTrack,
+      volume: volume ?? this.volume,
     );
   }
 }
@@ -77,6 +82,10 @@ class AudioStore {
   String _satelliteName = 'Unnamed Satellite';
   String? _serverUrl;
   String? _pendingLocalOverrideState;
+  double? _pendingLocalOverrideVolume;
+  static const _deviceVolumeChannel = MethodChannel(
+    'so.bruno.satellite/device_volume',
+  );
 
   final Signal<AudioState> state = signal(const AudioState());
 
@@ -95,6 +104,18 @@ class AudioStore {
 
   Future<void> init() async {
     await _loadSelectedTrack();
+    await _loadVolume();
+  }
+
+  Future<void> _loadVolume() async {
+    try {
+      final volume = await _deviceVolumeChannel.invokeMethod<double>(
+        'getMusicVolume',
+      );
+      state.value = state.value.copyWith(volume: volume ?? 1.0);
+    } catch (_) {
+      state.value = state.value.copyWith(volume: 1.0);
+    }
   }
 
   Future<void> _loadSelectedTrack() async {
@@ -161,10 +182,27 @@ class AudioStore {
             'id': _satelliteId,
             'name': _satelliteName,
             'state': _localPlaybackState,
+            'volume': state.value.volume,
           }),
         );
       }
     });
+  }
+
+  Future<void> setVolume(double volume) async {
+    final next = volume.clamp(0.0, 1.0).toDouble();
+    await _applyVolume(next);
+
+    if (_serverUrl == null || _serverUrl!.isEmpty) return;
+    try {
+      await http
+          .post(
+            Uri.parse('$_serverUrl/satellites/$_satelliteId/volume'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'volume': next}),
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
   }
 
   Future<void> toggleServerStatus() async {
@@ -210,6 +248,7 @@ class AudioStore {
       _reconnectAttempt = 0;
       state.value = state.value.copyWith(isWebSocketConnected: true);
       _pendingLocalOverrideState = _localPlaybackState;
+      _pendingLocalOverrideVolume = state.value.volume;
       _statusChannel!.sink.add(
         jsonEncode({
           'type': 'hello',
@@ -217,15 +256,19 @@ class AudioStore {
           'id': _satelliteId,
           'name': _satelliteName,
           'state': _localPlaybackState,
+          'volume': state.value.volume,
         }),
       );
       _statusChannelSub = _statusChannel!.stream.listen(
         (message) async {
           try {
             final data = jsonDecode(message.toString());
-            final newState = _stateForThisSatellite(data);
-            if (newState.isEmpty) return;
-            await _applyServerState(newState);
+            final snapshot = _snapshotForThisSatellite(data);
+            final newState = snapshot.state;
+            if (newState.isNotEmpty) await _applyServerState(newState);
+            if (snapshot.volume != null) {
+              await _applyVolume(snapshot.volume!, persist: false);
+            }
           } catch (_) {}
         },
         onDone: _handleSocketClosed,
@@ -299,26 +342,54 @@ class AudioStore {
   String get _localPlaybackState =>
       _player?.playing == true ? 'Playing' : 'Paused';
 
-  String _stateForThisSatellite(dynamic data) {
+  ({String state, double? volume}) _snapshotForThisSatellite(dynamic data) {
     if (data is Map && data['satellites'] is List) {
       for (final item in data['satellites']) {
         if (item is Map && item['id']?.toString() == _satelliteId) {
           final satelliteState = (item['state'] ?? '').toString();
+          final volume = _parseVolume(item['volume']);
+          var stateToApply = satelliteState;
           if (_pendingLocalOverrideState != null &&
               satelliteState != _pendingLocalOverrideState) {
-            return '';
+            stateToApply = '';
           }
           _pendingLocalOverrideState = null;
-          return satelliteState;
+          if (_pendingLocalOverrideVolume != null &&
+              volume != null &&
+              (volume - _pendingLocalOverrideVolume!).abs() > 0.001) {
+            return (state: stateToApply, volume: null);
+          }
+          _pendingLocalOverrideVolume = null;
+          return (state: stateToApply, volume: volume);
         }
       }
     }
 
-    if (_pendingLocalOverrideState != null) return '';
+    if (_pendingLocalOverrideState != null) return (state: '', volume: null);
 
     // Legacy fallback for older servers.
-    if (data is Map) return (data['state'] ?? '').toString();
-    return '';
+    if (data is Map) {
+      return (state: (data['state'] ?? '').toString(), volume: null);
+    }
+    return (state: '', volume: null);
+  }
+
+  double? _parseVolume(dynamic value) {
+    if (value is num) return value.toDouble().clamp(0.0, 1.0);
+    return double.tryParse(value?.toString() ?? '')?.clamp(0.0, 1.0);
+  }
+
+  Future<void> _applyVolume(double volume, {bool persist = true}) async {
+    final next = volume.clamp(0.0, 1.0).toDouble();
+    try {
+      final actual = await _deviceVolumeChannel.invokeMethod<double>(
+        'setMusicVolume',
+        {'volume': next},
+      );
+      state.value = state.value.copyWith(volume: actual ?? next);
+    } catch (_) {
+      state.value = state.value.copyWith(volume: next);
+    }
   }
 
   Future<void> play() async {

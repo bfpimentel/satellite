@@ -282,6 +282,32 @@ class MainScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 18),
+              _Panel(
+                title: 'VOLUME ${(audioState.volume * 100).round()}%',
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    trackHeight: 2,
+                    activeTrackColor: Colors.white,
+                    inactiveTrackColor: const Color(0xFF444444),
+                    thumbColor: Colors.white,
+                    overlayColor: Colors.white10,
+                    valueIndicatorColor: Colors.white,
+                    valueIndicatorTextStyle: const TextStyle(
+                      color: Colors.black,
+                      fontFamily: 'Victor Mono',
+                    ),
+                  ),
+                  child: Slider(
+                    value: audioState.volume,
+                    min: 0,
+                    max: 1,
+                    divisions: 20,
+                    label: '${(audioState.volume * 100).round()}%',
+                    onChanged: audioStore.setVolume,
+                  ),
+                ),
+              ),
               const Spacer(),
               SizedBox(
                 height: 56,

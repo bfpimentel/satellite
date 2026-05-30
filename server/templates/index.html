@@ -108,7 +108,7 @@
       }
       .satellite-row {
         display: grid;
-        grid-template-columns: 1fr 120px 110px 96px 42px;
+        grid-template-columns: 1fr 120px 90px 150px 96px 42px;
         align-items: center;
         gap: 14px;
         padding: 14px;
@@ -137,6 +137,7 @@
         padding: 13px 0;
       }
       button.delete:hover { color: #fff; border-color: #fff; }
+      input[type="range"] { width: 100%; accent-color: #fff; }
       .panel-footer { padding: 14px; border-top: 1px solid #333; display: flex; justify-content: flex-end; }
       @media (max-width: 700px) {
         header { display: block; }
@@ -176,6 +177,14 @@
         }).then((r) => r.json());
       }
 
+      function setSatelliteVolume(id, volume) {
+        return fetch(`/satellites/${encodeURIComponent(id)}/volume`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ volume: Number(volume) }),
+        }).then((r) => r.json());
+      }
+
       function renderSatellites(items) {
         const root = document.getElementById("satellites");
         if (!Array.isArray(items) || items.length === 0) {
@@ -189,9 +198,10 @@
             const statusClass = s.connected ? "online" : "offline";
             const statusText = s.connected ? "connected" : "disconnected";
             const state = s.state || "Paused";
+            const volume = Number(s.volume ?? 1);
             const next = state === "Playing" ? "Paused" : "Playing";
             const label = state === "Playing" ? "Pause" : "Play";
-            return `<div class="satellite-row"><span class="name">${escapeHtml(s.name)}</span><span class="${statusClass}">${statusText}</span><span class="state">${state}</span><button class="ghost" onclick='setSatelliteStatus(${JSON.stringify(s.id)}, ${JSON.stringify(next)})'>${label}</button><button class="delete" title="Delete satellite" onclick='deleteSatellite(${JSON.stringify(s.id)}, ${JSON.stringify(s.name)})'>×</button></div>`;
+            return `<div class="satellite-row"><span class="name">${escapeHtml(s.name)}</span><span class="${statusClass}">${statusText}</span><span class="state">${state}</span><label>${Math.round(volume * 100)}% <input type="range" min="0" max="1" step="0.05" value="${volume}" onchange='setSatelliteVolume(${JSON.stringify(s.id)}, this.value)' /></label><button class="ghost" onclick='setSatelliteStatus(${JSON.stringify(s.id)}, ${JSON.stringify(next)})'>${label}</button><button class="delete" title="Delete satellite" onclick='deleteSatellite(${JSON.stringify(s.id)}, ${JSON.stringify(s.name)})'>×</button></div>`;
           })
           .join("");
       }

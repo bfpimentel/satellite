@@ -71,6 +71,7 @@ def satellites_snapshot():
                 "connected": connected,
                 "last_seen": int(last_seen),
                 "state": item.get("state", "Paused"),
+                "volume": item.get("volume", 1.0),
             }
         )
 
@@ -96,7 +97,7 @@ def broadcast_snapshot():
         WS_CLIENTS.discard(client)
 
 
-def touch_satellite(satellite_id, name=None, state=None):
+def touch_satellite(satellite_id, name=None, state=None, volume=None):
     item = SATELLITES.get(
         satellite_id,
         {
@@ -104,6 +105,7 @@ def touch_satellite(satellite_id, name=None, state=None):
             "connected": False,
             "last_seen": 0,
             "state": "Paused",
+            "volume": 1.0,
         },
     )
     if name:
@@ -112,6 +114,13 @@ def touch_satellite(satellite_id, name=None, state=None):
         item["state"] = state
     elif "state" not in item:
         item["state"] = "Paused"
+    if volume is not None:
+        try:
+            item["volume"] = max(0.0, min(1.0, float(volume)))
+        except (TypeError, ValueError):
+            pass
+    elif "volume" not in item:
+        item["volume"] = 1.0
     item["connected"] = True
     item["last_seen"] = time.time()
     SATELLITES[satellite_id] = item
@@ -175,6 +184,7 @@ def set_satellite_status(satellite_id):
             "connected": False,
             "last_seen": 0,
             "state": "Paused",
+            "volume": 1.0,
         },
     )
     item["state"] = data["state"]
@@ -182,6 +192,31 @@ def set_satellite_status(satellite_id):
     save_satellites()
     broadcast_snapshot()
     return jsonify({"id": satellite_id, "state": item["state"]})
+
+
+@app.route("/satellites/<satellite_id>/volume", methods=["POST"])
+def set_satellite_volume(satellite_id):
+    data = request.get_json()
+    try:
+        volume = max(0.0, min(1.0, float(data.get("volume"))))
+    except (TypeError, ValueError, AttributeError):
+        return jsonify({"success": False, "message": "Invalid volume"}), 400
+
+    item = SATELLITES.get(
+        satellite_id,
+        {
+            "name": "Unnamed Satellite",
+            "connected": False,
+            "last_seen": 0,
+            "state": "Paused",
+            "volume": 1.0,
+        },
+    )
+    item["volume"] = volume
+    SATELLITES[satellite_id] = item
+    save_satellites()
+    broadcast_snapshot()
+    return jsonify({"id": satellite_id, "volume": volume})
 
 
 @sock.route("/ws/status")
@@ -206,6 +241,7 @@ def ws_status(ws):
                     satellite_id,
                     str(data.get("name") or "Unnamed Satellite"),
                     str(data.get("state") or ""),
+                    data.get("volume"),
                 )
                 broadcast_snapshot()
             elif data.get("type") == "ping" and data.get("id"):
@@ -213,6 +249,7 @@ def ws_status(ws):
                     str(data.get("id")),
                     str(data.get("name") or "Unnamed Satellite"),
                     str(data.get("state") or ""),
+                    data.get("volume"),
                 )
     finally:
         WS_CLIENTS.discard(ws)
