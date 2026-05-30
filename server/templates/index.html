@@ -137,6 +137,8 @@
         padding: 13px 0;
       }
       button.delete:hover { color: #fff; border-color: #fff; }
+      .satellite-id { color: #666; font-size: 11px; cursor: pointer; margin-left: 8px; }
+      .satellite-id:hover { color: #fff; }
       input[type="range"] { width: 100%; accent-color: #fff; }
       .panel-footer { padding: 14px; border-top: 1px solid #333; display: flex; justify-content: flex-end; }
       @media (max-width: 700px) {
@@ -201,7 +203,7 @@
             const volume = Number(s.volume ?? 1);
             const next = state === "Playing" ? "Paused" : "Playing";
             const label = state === "Playing" ? "Pause" : "Play";
-            return `<div class="satellite-row"><span class="name">${escapeHtml(s.name)}</span><span class="${statusClass}">${statusText}</span><span class="state">${state}</span><label>${Math.round(volume * 100)}% <input type="range" min="0" max="1" step="0.05" value="${volume}" onchange='setSatelliteVolume(${JSON.stringify(s.id)}, this.value)' /></label><button class="ghost" onclick='setSatelliteStatus(${JSON.stringify(s.id)}, ${JSON.stringify(next)})'>${label}</button><button class="delete" title="Delete satellite" onclick='deleteSatellite(${JSON.stringify(s.id)}, ${JSON.stringify(s.name)})'>×</button></div>`;
+            return `<div class="satellite-row"><span class="name">${escapeHtml(s.name)}<span class="satellite-id" title="Copy satellite ID" onclick='copySatelliteId(${JSON.stringify(s.id)}, this)'>${shortId(s.id)}</span></span><span class="${statusClass}">${statusText}</span><span class="state">${state}</span><label>${Math.round(volume * 100)}% <input type="range" min="0" max="1" step="0.05" value="${volume}" onchange='setSatelliteVolume(${JSON.stringify(s.id)}, this.value)' /></label><button class="ghost" onclick='setSatelliteStatus(${JSON.stringify(s.id)}, ${JSON.stringify(next)})'>${label}</button><button class="delete" title="Delete satellite" onclick='deleteSatellite(${JSON.stringify(s.id)}, ${JSON.stringify(s.name)})'>×</button></div>`;
           })
           .join("");
       }
@@ -214,6 +216,11 @@
           "'": "&#39;",
           '"': "&quot;",
         }[ch]));
+      }
+
+      function shortId(id) {
+        const value = String(id ?? "");
+        return value.length > 8 ? `${value.slice(0, 8)}...` : value;
       }
 
       function render(payload) {
@@ -259,6 +266,35 @@
         } catch (e) {
           console.error("Failed to delete satellite:", e);
         }
+      }
+
+      async function copySatelliteId(id, button) {
+        try {
+          await copyText(id);
+          const previous = button.textContent;
+          button.textContent = "Copied";
+          setTimeout(() => { button.textContent = previous; }, 1200);
+        } catch (e) {
+          console.error("Failed to copy satellite id:", e);
+        }
+      }
+
+      async function copyText(value) {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(value);
+          return;
+        }
+
+        const textarea = document.createElement("textarea");
+        textarea.value = value;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        if (!ok) throw new Error("Copy command failed");
       }
 
       setInterval(() => {
