@@ -291,13 +291,13 @@ class MainScreen extends StatelessWidget {
                     ? OutlinedButton(
                         onPressed: () => audioStore.toggleServerStatus(),
                         child: const Text(
-                          'REQUEST PAUSE',
+                          'PAUSE',
                         ),
                       )
                     : ElevatedButton(
                         onPressed: () => audioStore.toggleServerStatus(),
                         child: const Text(
-                          'REQUEST PLAY',
+                          'PLAY',
                           style: TextStyle(
                             letterSpacing: 2,
                             fontWeight: FontWeight.w600,

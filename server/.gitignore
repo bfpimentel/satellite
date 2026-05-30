@@ -1,3 +1,5 @@
 .venv
 __pycache__
 satellite_server.egg-info
+
+static/satellite.apk

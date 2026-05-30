@@ -112,9 +112,7 @@
   </head>
   <body>
     <h1>Satellite Server</h1>
-    <div class="status" id="status">Paused</div>
     <div class="controls">
-      <button id="toggleBtn" onclick="toggleStatus()">Play</button>
       <button class="download" onclick="downloadApp()">Download App</button>
     </div>
 
@@ -126,10 +124,9 @@
 
     <script>
       let ws;
-      let isBusy = false;
 
-      function setStatus(state) {
-        return fetch("/status", {
+      function setSatelliteStatus(id, state) {
+        return fetch(`/satellites/${encodeURIComponent(id)}/status`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ state: state }),
@@ -148,32 +145,26 @@
           .map((s) => {
             const statusClass = s.connected ? "online" : "offline";
             const statusText = s.connected ? "connected" : "disconnected";
-            return `<div class="satellite-row"><span>${s.name}</span><span class="${statusClass}">${statusText}</span></div>`;
+            const state = s.state || "Paused";
+            const next = state === "Playing" ? "Paused" : "Playing";
+            const label = state === "Playing" ? "Pause" : "Play";
+            return `<div class="satellite-row"><span>${escapeHtml(s.name)}</span><span class="${statusClass}">${statusText}</span><span>${state}</span><button style="padding: 8px 14px; font-size: 12px;" onclick='setSatelliteStatus(${JSON.stringify(s.id)}, ${JSON.stringify(next)})'>${label}</button></div>`;
           })
           .join("");
       }
 
-      function render(payload) {
-        const state = payload.state || "Unknown";
-        document.getElementById("status").textContent = state;
-        const btn = document.getElementById("toggleBtn");
-        const playing = state === "Playing";
-        btn.textContent = playing ? "Pause" : "Play";
-        btn.className = playing ? "" : "paused";
-        renderSatellites(payload.satellites || []);
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>'"]/g, (ch) => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          "'": "&#39;",
+          '"': "&quot;",
+        }[ch]));
       }
 
-      async function toggleStatus() {
-        if (isBusy) return;
-        isBusy = true;
-        try {
-          const current = document.getElementById("status").textContent.trim();
-          const next = current === "Playing" ? "Paused" : "Playing";
-          const data = await setStatus(next);
-          render(data);
-        } finally {
-          isBusy = false;
-        }
+      function render(payload) {
+        renderSatellites(payload.satellites || []);
       }
 
       function connectWebSocket() {
@@ -209,19 +200,11 @@
         if (ws && ws.readyState === WebSocket.OPEN) {
           return;
         }
-        Promise.all([
-          fetch("/status").then((r) => r.json()),
-          fetch("/satellites").then((r) => r.json()),
-        ]).then(([statusData, satellitesData]) => {
-          render({
-            state: statusData.state,
-            satellites: satellitesData.satellites,
-          });
-        });
+        fetch("/status").then((r) => r.json()).then(render);
       }, 3000);
 
       connectWebSocket();
-      render({ state: "Paused", satellites: [] });
+      render({ satellites: [] });
 
       // Register service worker for PWA support
       if ("serviceWorker" in navigator) {

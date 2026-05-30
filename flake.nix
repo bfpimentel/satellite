@@ -37,13 +37,14 @@
             "x86_64"
           ];
           includeNDK = true;
-          ndkVersions = [ "27.0.12077973" ];
+          ndkVersions = [
+            "27.0.12077973"
+            "28.2.13676358"
+          ];
           cmakeVersions = [ "3.22.1" ];
         };
 
         android-sdk = android-composition.androidsdk;
-
-        flutter-pkgs = pkgs.flutter;
       in
       {
         devShells.default = pkgs.mkShell {
@@ -53,7 +54,6 @@
             flutter
             jdk17
             android-sdk
-            nix-ld
           ];
 
           shellHook = ''

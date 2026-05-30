@@ -71,12 +71,12 @@ class AudioStore {
   StreamSubscription<dynamic>? _statusChannelSub;
   Timer? _reconnectTimer;
   Timer? _heartbeatTimer;
-  Timer? _fallbackPollTimer;
   int _reconnectAttempt = 0;
   bool _assetLoaded = false;
   String _satelliteId = 'unknown';
   String _satelliteName = 'Unnamed Satellite';
   String? _serverUrl;
+  String? _pendingLocalOverrideState;
 
   final Signal<AudioState> state = signal(const AudioState());
 
@@ -144,19 +144,7 @@ class AudioStore {
 
     state.value = state.value.copyWith(serverStatus: 'Ready');
     _startHeartbeat();
-    _startFallbackPoll();
-    await _fetchStatusOnce();
     await _connectStatusSocket();
-  }
-
-  void _startFallbackPoll() {
-    _fallbackPollTimer?.cancel();
-    _fallbackPollTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
-      if (_serverUrl == null || _serverUrl!.isEmpty) return;
-      if (_statusChannel == null) {
-        await _fetchStatusOnce();
-      }
-    });
   }
 
   void _startHeartbeat() {
@@ -172,6 +160,7 @@ class AudioStore {
             'type': 'ping',
             'id': _satelliteId,
             'name': _satelliteName,
+            'state': _localPlaybackState,
           }),
         );
       }
@@ -186,7 +175,7 @@ class AudioStore {
     try {
       final response = await http
           .post(
-            Uri.parse('$_serverUrl/status'),
+            Uri.parse('$_serverUrl/satellites/$_satelliteId/status'),
             headers: {'Content-Type': 'application/json'},
             body: jsonEncode({'state': nextState}),
           )
@@ -205,28 +194,6 @@ class AudioStore {
     }
   }
 
-  Future<void> _fetchStatusOnce() async {
-    if (_serverUrl == null || _serverUrl!.isEmpty) return;
-    try {
-      final response = await http
-          .get(Uri.parse('$_serverUrl/status'))
-          .timeout(const Duration(seconds: 5));
-      if (response.statusCode != 200) {
-        state.value = state.value.copyWith(
-          serverStatus: 'Server Error (${response.statusCode})',
-        );
-        return;
-      }
-      final newState = (jsonDecode(response.body)['state'] ?? '').toString();
-      await _applyServerState(newState);
-    } catch (e) {
-      state.value = state.value.copyWith(serverStatus: 'Server Unreachable');
-      if (_player?.playing == true) {
-        await pause();
-      }
-    }
-  }
-
   Future<void> _connectStatusSocket() async {
     await _disconnectStatusSocket(stopHeartbeat: false);
 
@@ -242,19 +209,22 @@ class AudioStore {
       _statusChannel = WebSocketChannel.connect(wsUri);
       _reconnectAttempt = 0;
       state.value = state.value.copyWith(isWebSocketConnected: true);
+      _pendingLocalOverrideState = _localPlaybackState;
       _statusChannel!.sink.add(
         jsonEncode({
           'type': 'hello',
           'role': 'satellite',
           'id': _satelliteId,
           'name': _satelliteName,
+          'state': _localPlaybackState,
         }),
       );
       _statusChannelSub = _statusChannel!.stream.listen(
         (message) async {
           try {
             final data = jsonDecode(message.toString());
-            final newState = (data['state'] ?? '').toString();
+            final newState = _stateForThisSatellite(data);
+            if (newState.isEmpty) return;
             await _applyServerState(newState);
           } catch (_) {}
         },
@@ -277,8 +247,6 @@ class AudioStore {
     if (stopHeartbeat) {
       _heartbeatTimer?.cancel();
       _heartbeatTimer = null;
-      _fallbackPollTimer?.cancel();
-      _fallbackPollTimer = null;
     }
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
@@ -296,7 +264,6 @@ class AudioStore {
     final delaySeconds = _reconnectAttempt > 6 ? 10 : _reconnectAttempt + 1;
     state.value = state.value.copyWith(serverStatus: 'Reconnecting...');
     _reconnectTimer = Timer(Duration(seconds: delaySeconds), () async {
-      await _fetchStatusOnce();
       await _connectStatusSocket();
     });
   }
@@ -327,6 +294,31 @@ class AudioStore {
         serverStatus: newState.isEmpty ? 'Unknown' : newState,
       );
     }
+  }
+
+  String get _localPlaybackState =>
+      _player?.playing == true ? 'Playing' : 'Paused';
+
+  String _stateForThisSatellite(dynamic data) {
+    if (data is Map && data['satellites'] is List) {
+      for (final item in data['satellites']) {
+        if (item is Map && item['id']?.toString() == _satelliteId) {
+          final satelliteState = (item['state'] ?? '').toString();
+          if (_pendingLocalOverrideState != null &&
+              satelliteState != _pendingLocalOverrideState) {
+            return '';
+          }
+          _pendingLocalOverrideState = null;
+          return satelliteState;
+        }
+      }
+    }
+
+    if (_pendingLocalOverrideState != null) return '';
+
+    // Legacy fallback for older servers.
+    if (data is Map) return (data['state'] ?? '').toString();
+    return '';
   }
 
   Future<void> play() async {
