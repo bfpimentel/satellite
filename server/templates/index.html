@@ -25,36 +25,55 @@
         background: #000;
         color: #fff;
         min-height: 100vh;
+        padding: 32px 20px;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+        background-size: 48px 48px;
+        mask-image: radial-gradient(circle at center, #000 0, transparent 72%);
+      }
+      main { width: min(920px, 100%); margin: 0 auto; position: relative; }
+      header {
         display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        gap: 20px;
+        justify-content: space-between;
+        align-items: end;
+        gap: 24px;
+        border-bottom: 1px solid #fff;
+        padding: 12px 0 22px;
+        margin-bottom: 24px;
       }
       h1 {
-        margin-bottom: 24px;
-        font-size: 24px;
+        color: #d8d8d8;
+        font-size: clamp(24px, 5vw, 48px);
         font-weight: 300;
-      }
-      .status {
-        font-size: 48px;
-        font-weight: 700;
-        margin-bottom: 24px;
-        text-transform: uppercase;
         letter-spacing: 4px;
+        line-height: 1.05;
+        margin-top: 8px;
+        text-transform: uppercase;
+      }
+      .eyebrow, .panel h2 {
+        font-size: 11px;
+        letter-spacing: 2px;
+        color: #888;
+        text-transform: uppercase;
       }
       .controls {
         display: flex;
-        gap: 20px;
-        margin-bottom: 18px;
+        gap: 10px;
+        flex-wrap: wrap;
       }
       button {
         background: #fff;
         color: #000;
-        border: none;
-        padding: 20px 40px;
-        font-size: 16px;
+        border: 1px solid #fff;
+        padding: 13px 18px;
+        font-size: 12px;
         font-weight: 600;
         font-family: "Victor Mono", monospace;
         cursor: pointer;
@@ -75,52 +94,76 @@
         color: #fff;
         border: 1px solid #fff;
       }
+      button.ghost { background: #000; color: #fff; }
       .panel {
-        width: min(720px, 92vw);
-        border: 1px solid #fff;
-        padding: 16px;
+        border: 1px solid #444;
+        background: rgba(255,255,255,.025);
+        margin-top: 16px;
       }
       .panel h2 {
-        font-size: 12px;
-        letter-spacing: 2px;
-        color: #aaa;
-        margin-bottom: 10px;
-      }
-      .satellite-row {
         display: flex;
         justify-content: space-between;
-        gap: 12px;
-        padding: 8px 0;
+        border-bottom: 1px solid #333;
+        padding: 12px 14px;
+      }
+      .satellite-row {
+        display: grid;
+        grid-template-columns: 1fr 120px 110px 96px 42px;
+        align-items: center;
+        gap: 14px;
+        padding: 14px;
         border-top: 1px solid #333;
         font-size: 14px;
       }
       .satellite-row:first-child {
         border-top: none;
       }
-      .online {
-        color: #8ef7a1;
-      }
-      .offline {
-        color: #ff9b9b;
-      }
+      .dim { color: #777; padding: 18px 14px; font-size: 13px; }
+      .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .state { font-weight: 700; letter-spacing: 1px; }
+      .online, .offline { color: #fff; }
+      .online::before, .offline::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; background: #fff; vertical-align: 1px; }
+      .offline { color: #777; }
+      .offline::before { background: #555; }
       button.clear {
         background: transparent;
-        color: #ff9b9b;
-        border: 1px solid #ff9b9b;
+        color: #999;
+        border: 1px solid #555;
+      }
+      button.delete {
+        background: #000;
+        color: #777;
+        border: 1px solid #444;
+        padding: 13px 0;
+      }
+      button.delete:hover { color: #fff; border-color: #fff; }
+      .panel-footer { padding: 14px; border-top: 1px solid #333; display: flex; justify-content: flex-end; }
+      @media (max-width: 700px) {
+        header { display: block; }
+        .controls { margin-top: 18px; }
+        .satellite-row { grid-template-columns: 1fr; gap: 8px; }
+        .satellite-row button { width: 100%; }
       }
     </style>
   </head>
   <body>
-    <h1>Satellite Server</h1>
-    <div class="controls">
-      <button class="download" onclick="downloadApp()">Download App</button>
-    </div>
+    <main>
+      <header>
+        <div>
+          <div class="eyebrow">white noise control plane</div>
+          <h1>Satellite Server</h1>
+        </div>
+        <div class="controls">
+          <button class="download" onclick="downloadApp()">Download APK</button>
+        </div>
+      </header>
 
-    <div class="panel">
-      <h2>SATELLITES</h2>
-      <div id="satellites"></div>
-      <button class="clear" onclick="clearSatellites()" style="margin-top: 16px; padding: 12px 24px; font-size: 14px;">Clear Satellites</button>
-    </div>
+      <div class="panel">
+        <h2><span>SATELLITES</span><span id="count">0 ONLINE</span></h2>
+        <div id="satellites"></div>
+        <div class="panel-footer"><button class="clear" onclick="clearSatellites()">Clear Satellites</button></div>
+      </div>
+    </main>
 
     <script>
       let ws;
@@ -148,7 +191,7 @@
             const state = s.state || "Paused";
             const next = state === "Playing" ? "Paused" : "Playing";
             const label = state === "Playing" ? "Pause" : "Play";
-            return `<div class="satellite-row"><span>${escapeHtml(s.name)}</span><span class="${statusClass}">${statusText}</span><span>${state}</span><button style="padding: 8px 14px; font-size: 12px;" onclick='setSatelliteStatus(${JSON.stringify(s.id)}, ${JSON.stringify(next)})'>${label}</button></div>`;
+            return `<div class="satellite-row"><span class="name">${escapeHtml(s.name)}</span><span class="${statusClass}">${statusText}</span><span class="state">${state}</span><button class="ghost" onclick='setSatelliteStatus(${JSON.stringify(s.id)}, ${JSON.stringify(next)})'>${label}</button><button class="delete" title="Delete satellite" onclick='deleteSatellite(${JSON.stringify(s.id)}, ${JSON.stringify(s.name)})'>×</button></div>`;
           })
           .join("");
       }
@@ -164,7 +207,9 @@
       }
 
       function render(payload) {
-        renderSatellites(payload.satellites || []);
+        const satellites = payload.satellites || [];
+        document.getElementById("count").textContent = `${satellites.filter((s) => s.connected).length}/${satellites.length} ONLINE`;
+        renderSatellites(satellites);
       }
 
       function connectWebSocket() {
@@ -193,6 +238,16 @@
           console.log("Cleared satellites:", data);
         } catch (e) {
           console.error("Failed to clear satellites:", e);
+        }
+      }
+
+      async function deleteSatellite(id, name) {
+        if (!confirm(`Delete satellite "${name}"?`)) return;
+        try {
+          const response = await fetch(`/satellites/${encodeURIComponent(id)}`, { method: "DELETE" });
+          render(await response.json());
+        } catch (e) {
+          console.error("Failed to delete satellite:", e);
         }
       }
 

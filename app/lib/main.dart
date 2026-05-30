@@ -63,6 +63,14 @@ class SatelliteApp extends StatelessWidget {
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           elevation: 0,
+          scrolledUnderElevation: 0,
+          titleTextStyle: TextStyle(
+            fontFamily: 'Victor Mono',
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w300,
+            letterSpacing: 4,
+          ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -87,12 +95,14 @@ class SatelliteApp extends StatelessWidget {
           ),
         ),
         inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+          fillColor: Color(0xFF080808),
           border: OutlineInputBorder(
               borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: Colors.white)),
+              borderSide: BorderSide(color: Color(0xFF555555))),
           enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.zero,
-              borderSide: BorderSide(color: Colors.white)),
+              borderSide: BorderSide(color: Color(0xFF555555))),
           focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.zero,
               borderSide: BorderSide(color: Colors.white)),
@@ -147,15 +157,14 @@ class SetupScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 40),
-            const Text(
-              'SETUP',
-              style: TextStyle(
-                  fontSize: 18, letterSpacing: 2, color: Colors.white),
+            const SizedBox(height: 24),
+            const _HeroTitle(
+              eyebrow: 'FIRST CONTACT',
+              title: 'CONNECT\nSATELLITE',
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             const Text(
-              'Enter the server URL to connect to',
+              'Enter the server URL and name this device.',
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 32),
@@ -242,47 +251,36 @@ class MainScreen extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 40),
-              const Text(
-                'SERVER STATUS',
-                style: TextStyle(
-                    fontSize: 12, letterSpacing: 2, color: Colors.grey),
+              const SizedBox(height: 20),
+              _StatusPanel(
+                label: 'SERVER STATUS',
+                value: audioState.serverStatus.toUpperCase(),
+                active: audioState.serverStatus == 'Playing',
+                connected: audioState.isWebSocketConnected,
               ),
-              const SizedBox(height: 8),
-              Text(
-                audioState.serverStatus.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 4,
+              const SizedBox(height: 18),
+              _Panel(
+                title: 'SOUND TRACK',
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _TrackButton(
+                        label: 'WHITE NOISE',
+                        isSelected:
+                            audioState.selectedTrack == AudioTrack.whiteNoise,
+                        onTap: () => audioStore.setTrack(AudioTrack.whiteNoise),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _TrackButton(
+                        label: 'RAIN',
+                        isSelected: audioState.selectedTrack == AudioTrack.rain,
+                        onTap: () => audioStore.setTrack(AudioTrack.rain),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 48),
-              const Text(
-                'SOUND TRACK',
-                style: TextStyle(
-                    fontSize: 12, letterSpacing: 2, color: Colors.grey),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _TrackButton(
-                      label: 'WHITE NOISE',
-                      isSelected:
-                          audioState.selectedTrack == AudioTrack.whiteNoise,
-                      onTap: () => audioStore.setTrack(AudioTrack.whiteNoise),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _TrackButton(
-                      label: 'RAIN',
-                      isSelected: audioState.selectedTrack == AudioTrack.rain,
-                      onTap: () => audioStore.setTrack(AudioTrack.rain),
-                    ),
-                  ),
-                ],
               ),
               const Spacer(),
               SizedBox(
@@ -399,6 +397,130 @@ class _TrackButton extends StatelessWidget {
             color: isSelected ? Colors.black : Colors.white,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HeroTitle extends StatelessWidget {
+  final String eyebrow;
+  final String title;
+
+  const _HeroTitle({required this.eyebrow, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          eyebrow,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 11,
+            letterSpacing: 2,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 42,
+            height: .92,
+            fontWeight: FontWeight.w300,
+            letterSpacing: -1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Panel extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _Panel({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF050505),
+        border: Border.all(color: const Color(0xFF333333)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 11,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+          Container(height: 1, color: const Color(0xFF222222)),
+          Padding(padding: const EdgeInsets.all(14), child: child),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusPanel extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool active;
+  final bool connected;
+
+  const _StatusPanel({
+    required this.label,
+    required this.value,
+    required this.active,
+    required this.connected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _Panel(
+      title: label,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                color: connected ? Colors.white : const Color(0xFF555555),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                connected ? 'LINK ESTABLISHED' : 'LINK DEGRADED',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 11,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: value.length > 14 ? 24 : 34,
+              fontWeight: FontWeight.w700,
+              letterSpacing: active ? 4 : 2,
+              color: Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

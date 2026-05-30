@@ -142,6 +142,14 @@ def clear_satellites():
     return jsonify({"success": True, "message": "All satellites cleared"})
 
 
+@app.route("/satellites/<satellite_id>", methods=["DELETE"])
+def delete_satellite(satellite_id):
+    SATELLITES.pop(satellite_id, None)
+    save_satellites()
+    broadcast_snapshot()
+    return jsonify({"success": True, "satellites": satellites_snapshot()})
+
+
 @app.route("/status", methods=["POST"])
 def set_status():
     """Legacy endpoint: set all known satellites to one state."""
